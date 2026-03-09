@@ -3,106 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spherical Thicket Explorer</title>
+    <title>Spherical Surface Explorer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background-color: #f8f8f8; cursor: grab; }
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #ffffff; cursor: grab; }
         body:active { cursor: grabbing; }
     </style>
 </head>
 <body>
 
 <script>
-    let lines = [];
-    const lineCount = 10000;
-    const planetRadius = 3000; // 흰색 구체의 반지름
-    
-    let rotX = 0, rotY = 0; // 구체를 회전시켜 탐험하는 방식
+    let rotX = 0.5; // 구의 상단이 보이도록 초기 각도 설정
+    let rotY = 0;
+    const planetRadius = 3000; // 구체의 크기
 
     function setup() {
         createCanvas(windowWidth, windowHeight, WEBGL);
-        noiseDetail(8, 0.65);
-
-        for (let i = 0; i < lineCount; i++) {
-            lines.push(generateSphericalHair());
-        }
     }
 
     function draw() {
-        background(248); 
+        background(255); // 전체 흰색 배경
 
-        // 사용자가 구 위를 굴리며 탐험하는 듯한 인터랙션
+        // 드래그 인터랙션: 구를 회전시켜 표면을 이동하는 효과
         if (mouseIsPressed) {
             rotY += (mouseX - pmouseX) * 0.005;
             rotX -= (mouseY - pmouseY) * 0.005;
         }
 
-        // 카메라 및 조명 설정
-        perspective(PI / 3, width / height, 10, 20000);
-        camera(0, 0, 1500, 0, 0, 0, 0, 1, 0);
-        ambientLight(200);
-        pointLight(255, 255, 255, 0, -500, 500);
+        // 카메라 설정: 구체의 윗부분이 화면 하단에 걸치도록 배치
+        // (x, y, z, lookAtX, lookAtY, lookAtZ)
+        camera(0, -planetRadius - 400, 1200, 0, -planetRadius, 0, 0, 1, 0);
+
+        // 아주 미세한 음영을 주어 구의 입체감만 살림 (없으면 평면처럼 보임)
+        ambientLight(240);
+        directionalLight(255, 255, 255, 0, 1, -1);
 
         push();
-        rotateX(rotX);
         rotateY(rotY);
+        rotateX(rotX);
 
-        // 1. 흰색 바닥 구체 생성
-        push();
+        // 흰색 구체 (바닥 역할)
+        fill(255);
         noStroke();
-        fill(255); // 요청하신 흰색 바닥
-        sphere(planetRadius); 
+        // 구의 디테일(세그먼트)을 높여 매끄럽게 표현
+        sphere(planetRadius, 64, 64); 
         pop();
-
-        // 2. 덤불 렌더링
-        noFill();
-        for (let l of lines) {
-            // 카메라와 가까운 부분만 진하게 그려 성능과 몰입감 최적화
-            stroke(0, l.opacity);
-            strokeWeight(l.weight);
-            
-            beginShape();
-            for (let v of l.points) {
-                vertex(v.x, v.y, v.z);
-            }
-            endShape();
-        }
-        pop();
-    }
-
-    function generateSphericalHair() {
-        let points = [];
-        
-        // 구 표면 위의 랜덤한 시작 지점 계산 (구면 좌표계)
-        let theta = random(TWO_PI);
-        let phi = acos(random(-1, 1));
-        
-        let x = planetRadius * sin(phi) * cos(theta);
-        let y = planetRadius * sin(phi) * sin(theta);
-        let z = planetRadius * cos(phi);
-        
-        const segments = random(20, 50);
-        const step = 15;
-
-        for (let i = 0; i < segments; i++) {
-            // 방향성을 완전히 랜덤하게 만들기 위해 3D 노이즈 적용
-            let n = noise(x * 0.01, y * 0.01, z * 0.01);
-            let angle1 = n * TWO_PI * 5;
-            let angle2 = n * PI * 3;
-
-            // 선이 구 표면 밖으로 무질서하게 뻗어나감
-            x += cos(angle1) * step;
-            y += sin(angle1) * step;
-            z += cos(angle2) * step;
-
-            points.push({x: x, y: y, z: z});
-        }
-
-        return {
-            points: points,
-            weight: random(0.3, 0.8),
-            opacity: random(30, 90)
-        };
     }
 
     function windowResized() {
