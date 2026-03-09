@@ -2,102 +2,95 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Glossy Thicket on Sphere</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <title>3D Glossy Jungle</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.0/p5.js"></script>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background-color: #f0f0f0; cursor: grab; }
-        body:active { cursor: grabbing; }
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #f0f0f0; }
+        canvas { display: block; }
     </style>
 </head>
 <body>
-    <script>
-        let planet;
-        let thicket;
-        const planetRadius = 2500;
-        const branchCount = 350; 
+<script>
+    let planet, thicket;
+    const planetRadius = 2500;
+    const branchCount = 300; 
+    let rotX = 0.4, rotY = 0;
 
-        let rotX = 0.4;
-        let rotY = 0;
+    function setup() {
+        createCanvas(windowWidth, windowHeight, WEBGL);
+        
+        // 1. 흰색 바닥 구체 생성
+        planet = buildGeometry(() => {
+            noStroke();
+            fill(255);
+            sphere(planetRadius, 64, 64);
+        });
 
-        function setup() {
-            createCanvas(windowWidth, windowHeight, WEBGL);
-            
-            // 바닥 구체 생성
-            planet = buildGeometry(() => {
-                noStroke();
-                fill(255);
-                sphere(planetRadius, 64, 64);
-            });
+        // 2. 검정색 광택 가지 생성
+        thicket = buildGeometry(() => {
+            for (let i = 0; i < branchCount; i++) {
+                let lon = random(360);
+                let lat = acos(random(-1, 1)) * (180 / PI);
+                
+                let x = planetRadius * sin(lat * (PI/180)) * cos(lon * (PI/180));
+                let y = planetRadius * sin(lat * (PI/180)) * sin(lon * (PI/180));
+                let z = planetRadius * cos(lat * (PI/180));
 
-            // 검은색 가지들 생성
-            buildThicket();
-        }
+                let currentPos = createVector(x, y, z);
+                let direction = currentPos.copy().normalize(); 
+                let thickness = random(15, 25);
+                
+                for (let j = 0; j < 25; j++) {
+                    push();
+                    translate(currentPos.x, currentPos.y, currentPos.z);
+                    fill(10); 
+                    noStroke();
+                    sphere(thickness); 
+                    pop();
 
-        function buildThicket() {
-            if (thicket) freeGeometry(thicket);
-            thicket = buildGeometry(() => {
-                for (let i = 0; i < branchCount; i++) {
-                    let lon = random(0, 360);
-                    let lat = acos(random(-1, 1)) * (180 / PI);
-                    
-                    let x = planetRadius * sin(lat * (PI/180)) * cos(lon * (PI/180));
-                    let y = planetRadius * sin(lat * (PI/180)) * sin(lon * (PI/180));
-                    let z = planetRadius * cos(lat * (PI/180));
-
-                    let currentPos = createVector(x, y, z);
-                    let direction = currentPos.copy().normalize(); 
-                    
-                    let segments = floor(random(15, 35));
-                    let thickness = random(10, 22);
-                    
-                    for (let j = 0; j < segments; j++) {
-                        push();
-                        translate(currentPos.x, currentPos.y, currentPos.z);
-                        fill(15); 
-                        noStroke();
-                        sphere(thickness); 
-                        pop();
-
-                        let noiseVel = createVector(random(-0.5, 0.5), random(-0.5, 0.5), random(-0.5, 0.5));
-                        direction.add(noiseVel).normalize();
-                        currentPos.add(p5.Vector.mult(direction, 30));
-                        thickness *= 0.96;
-                    }
+                    let noiseVel = createVector(random(-0.4, 0.4), random(-0.4, 0.4), random(-0.4, 0.4));
+                    direction.add(noiseVel).normalize();
+                    currentPos.add(p5.Vector.mult(direction, 35));
+                    thickness *= 0.95;
                 }
-            });
-        }
-
-        function draw() {
-            background(240); 
-
-            if (mouseIsPressed) {
-                rotY += (mouseX - pmouseX) * 0.005;
-                rotX -= (mouseY - pmouseY) * 0.005;
             }
+        });
+    }
 
-            camera(0, -planetRadius - 1000, 2000, 0, -planetRadius, 0, 0, 1, 0);
+    function draw() {
+        background(240); 
 
-            ambientLight(100);
-            directionalLight(255, 255, 255, 0, 1, -1);
-            pointLight(255, 255, 255, 0, -planetRadius - 2000, 1000);
-
-            push();
-            rotateY(rotY);
-            rotateX(rotX);
-
-            specularMaterial(255);
-            model(planet);
-
-            specularMaterial(10); 
-            shininess(150);       
-            model(thicket);
-            pop();
+        if (mouseIsPressed) {
+            rotY += (mouseX - pmouseX) * 0.005;
+            rotX -= (mouseY - pmouseY) * 0.005;
         }
 
-        function windowResized() {
-            resizeCanvas(windowWidth, windowHeight);
-        }
-    </script>
+        // 지평선 시점 카메라
+        camera(0, -planetRadius - 1200, 2000, 0, -planetRadius, 0, 0, 1, 0);
+
+        // 광택용 조명
+        ambientLight(100);
+        directionalLight(255, 255, 255, 0, 1, -1);
+        pointLight(255, 255, 255, 0, -planetRadius - 2000, 1500);
+
+        push();
+        rotateY(rotY);
+        rotateX(rotX);
+
+        // 구체 렌더링
+        specularMaterial(255);
+        model(planet);
+
+        // 가지 렌더링 (광택)
+        specularMaterial(15); 
+        shininess(200);       
+        model(thicket);
+        pop();
+    }
+
+    function windowResized() {
+        resizeCanvas(windowWidth, windowHeight);
+    }
+</script>
 </body>
 </html>
