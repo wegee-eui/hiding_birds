@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generative Hairline Interaction</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* 스크롤 방지 */
+            background-color: #fdfdfd; /* 배경색 (약간의 미색) */
+        }
+        canvas {
+            display: block;
+        }
+        /* 안내 문구 (필요 없으면 삭제 가능) */
+        #instruction {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-family: sans-serif;
+            color: #333;
+            pointer-events: none;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="instruction">Click and drag to draw lines. Press 'C' to clear.</div>
+
+    <script>
+        function setup() {
+            // 화면 전체 크기로 캔버스 생성
+            createCanvas(windowWidth, windowHeight);
+            background(253, 253, 253); // 초기 배경색
+        }
+
+        function draw() {
+            if (mouseIsPressed) {
+                // 한 번의 드래그에 8개의 미세한 선을 동시에 그려 겹침 효과 생성
+                for (let i = 0; i < 8; i++) {
+                    // 선의 투명도를 낮게 설정 (0~255 중 40)
+                    stroke(0, 0, 0, 40);
+                    // 선의 두께를 아주 얇게 설정
+                    strokeWeight(0.6);
+                    noFill();
+
+                    // 머리카락처럼 구부러지는 효과를 위한 랜덤 오프셋
+                    // noise를 사용하면 더 자연스럽지만, 속도를 위해 random과 lerp 조합 사용
+                    let offsetStart = random(-5, 5);
+                    let offsetEnd = random(-15, 15);
+
+                    // 베지어 곡선(Bezier Curve)을 활용해 부드럽게 꺾이는 선 구현
+                    // 시작점, 제어점1, 제어점2, 끝점
+                    bezier(
+                        pmouseX + offsetStart, pmouseY + offsetStart,
+                        pmouseX + random(-20, 20), pmouseY + random(-20, 20),
+                        mouseX + random(-20, 20), mouseY + random(-20, 20),
+                        mouseX + offsetEnd, mouseY + offsetEnd
+                    );
+                }
+            }
+        }
+
+        // 창 크기가 조절될 때 캔버스 크기도 대응
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+            background(253, 253, 253);
+        }
+
+        // 'C' 키를 누르면 화면 초기화
+        function keyPressed() {
+            if (key === 'c' || key === 'C') {
+                clear();
+                background(253, 253, 253);
+            }
+        }
+    </script>
+</body>
+</html>
