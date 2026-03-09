@@ -1,116 +1,103 @@
-let planet;
-let thicket;
-const planetRadius = 2500;
-const branchCount = 200; // 가지의 개수
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Glossy Thicket on Sphere</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #f0f0f0; cursor: grab; }
+        body:active { cursor: grabbing; }
+    </style>
+</head>
+<body>
+    <script>
+        let planet;
+        let thicket;
+        const planetRadius = 2500;
+        const branchCount = 350; 
 
-let rotX = 0.4;
-let rotY = 0;
+        let rotX = 0.4;
+        let rotY = 0;
 
-function setup() {
-  createCanvas(windowWidth, windowHeight, WEBGL);
-  angleMode(DEGREES);
-  
-  // 바닥이 될 흰색 구체 미리 생성 (성능 최적화)
-  planet = buildGeometry(() => {
-    noStroke();
-    fill(255);
-    sphere(planetRadius, 64, 64);
-  });
+        function setup() {
+            createCanvas(windowWidth, windowHeight, WEBGL);
+            
+            // 바닥 구체 생성
+            planet = buildGeometry(() => {
+                noStroke();
+                fill(255);
+                sphere(planetRadius, 64, 64);
+            });
 
-  // 구 표면에 심어질 검은 가지들 생성
-  buildThicket();
-}
+            // 검은색 가지들 생성
+            buildThicket();
+        }
 
-function buildThicket() {
-  if (thicket) freeGeometry(thicket);
+        function buildThicket() {
+            if (thicket) freeGeometry(thicket);
+            thicket = buildGeometry(() => {
+                for (let i = 0; i < branchCount; i++) {
+                    let lon = random(0, 360);
+                    let lat = acos(random(-1, 1)) * (180 / PI);
+                    
+                    let x = planetRadius * sin(lat * (PI/180)) * cos(lon * (PI/180));
+                    let y = planetRadius * sin(lat * (PI/180)) * sin(lon * (PI/180));
+                    let z = planetRadius * cos(lat * (PI/180));
 
-  thicket = buildGeometry(() => {
-    for (let i = 0; i < branchCount; i++) {
-      // 1. 구 표면 위의 랜덤 지점 선정
-      let theta = random(360);
-      let phi = acos(random(-1, 1)) * (180 / PI);
-      
-      let x = planetRadius * sin(phi) * cos(theta);
-      let y = planetRadius * sin(phi) * sin(theta);
-      let z = planetRadius * cos(phi);
+                    let currentPos = createVector(x, y, z);
+                    let direction = currentPos.copy().normalize(); 
+                    
+                    let segments = floor(random(15, 35));
+                    let thickness = random(10, 22);
+                    
+                    for (let j = 0; j < segments; j++) {
+                        push();
+                        translate(currentPos.x, currentPos.y, currentPos.z);
+                        fill(15); 
+                        noStroke();
+                        sphere(thickness); 
+                        pop();
 
-      push();
-      translate(x, y, z);
-      
-      // 2. 구 표면에 수직(바깥 방향)으로 정렬
-      // 현재 좌표(x,y,z) 자체가 중심에서 뻗어나가는 방향 벡터가 됩니다.
-      let v = createVector(x, y, z).normalize();
-      let rho = v.mag();
-      let phi_rot = acos(v.z / (rho || 1));
-      let theta_rot = atan2(v.y, v.x);
-      
-      rotateZ(theta_rot);
-      rotateY(phi_rot);
-      rotateY(90); // 실린더가 바깥을 향하도록 조정
+                        let noiseVel = createVector(random(-0.5, 0.5), random(-0.5, 0.5), random(-0.5, 0.5));
+                        direction.add(noiseVel).normalize();
+                        currentPos.add(p5.Vector.mult(direction, 30));
+                        thickness *= 0.96;
+                    }
+                }
+            });
+        }
 
-      // 3. 검은색 광택 줄기 그리기
-      fill(10); // 거의 검정색
-      let segments = random(5, 15);
-      let thickness = random(15, 30);
-      
-      for (let j = 0; j < segments; j++) {
-        // 무작위로 구부러짐 추가
-        rotateY(random(-15, 15));
-        rotateZ(random(-15, 15));
-        
-        translate(50, 0, 0); // 바깥쪽으로 이동하며 그리기
-        
-        push();
-        // 실제 입체적인 가지 모양 (실린더)
-        rotateZ(90);
-        cylinder(thickness, 60); 
-        pop();
-        
-        translate(50, 0, 0);
-        thickness *= 0.95; // 끝으로 갈수록 가늘어짐
-      }
-      pop();
-    }
-  });
-}
+        function draw() {
+            background(240); 
 
-function draw() {
-  background(240);
-  
-  if (mouseIsPressed) {
-    rotY += (mouseX - pmouseX) * 0.2;
-    rotX -= (mouseY - pmouseY) * 0.2;
-  }
+            if (mouseIsPressed) {
+                rotY += (mouseX - pmouseX) * 0.005;
+                rotX -= (mouseY - pmouseY) * 0.005;
+            }
 
-  // 카메라: 구체 상단이 보이도록 배치
-  camera(0, -planetRadius - 1200, 2000, 0, -planetRadius, 0, 0, 1, 0);
+            camera(0, -planetRadius - 1000, 2000, 0, -planetRadius, 0, 0, 1, 0);
 
-  // 광택을 위한 조명 설정
-  ambientLight(100);
-  directionalLight(255, 255, 255, 1, 1, -1);
-  pointLight(255, 255, 255, 0, -planetRadius - 2000, 1000);
+            ambientLight(100);
+            directionalLight(255, 255, 255, 0, 1, -1);
+            pointLight(255, 255, 255, 0, -planetRadius - 2000, 1000);
 
-  push();
-  rotateY(rotY);
-  rotateX(rotX);
+            push();
+            rotateY(rotY);
+            rotateX(rotX);
 
-  // 흰색 바닥 구체
-  noStroke();
-  specularMaterial(255);
-  model(planet);
+            specularMaterial(255);
+            model(planet);
 
-  // 검은색 광택 가지들
-  specularMaterial(20); // 검은색 재질
-  shininess(150);       // 강한 흰색 광택
-  model(thicket);
-  pop();
-}
+            specularMaterial(10); 
+            shininess(150);       
+            model(thicket);
+            pop();
+        }
 
-function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
-}
-
-function mousePressed() {
-  // 클릭 시 정글 재생성 기능 (선택 사항)
-  // buildThicket(); 
-}
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+        }
+    </script>
+</body>
+</html>
