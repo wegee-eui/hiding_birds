@@ -2,116 +2,93 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>3D Vertical Cylinder Thicket</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.0/p5.js"></script>
+    <title>Stegano Entrance</title>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background-color: #f0f0f0; cursor: grab; }
-        body:active { cursor: grabbing; }
+        :root { --accent: #00ff88; }
+        body { 
+            background: #050505; 
+            color: white; 
+            font-family: 'Courier New', monospace;
+            display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; 
+            height: 100vh; margin: 0; 
+        }
+
+        /* 이미지 영역 */
+        #stego-container {
+            position: relative;
+            margin-bottom: 50px;
+            transition: transform 0.5s;
+        }
+
+        #stego-image {
+            width: 400px;
+            filter: brightness(1); /* 초기 상태: 거의 아무것도 안 보임 */
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            cursor: default;
+        }
+
+        /* 슬라이더(막대) 스타일링 */
+        .slider-wrapper { width: 300px; text-align: center; }
+        
+        input[type=range] {
+            width: 100%;
+            cursor: pointer;
+            accent-color: var(--accent); /* 슬라이더 포인트 색상 */
+        }
+
+        .hint { font-size: 0.8rem; color: #444; margin-top: 10px; transition: color 0.3s; }
+        
+        /* 메시지가 발견되었을 때의 효과 */
+        .revealed #stego-image {
+            cursor: pointer;
+            outline: 2px solid var(--accent);
+            box-shadow: 0 0 30px var(--accent);
+        }
     </style>
 </head>
 <body>
+
+<div id="stego-container">
+    <img id="stego-image" src="your_stego_image.png" alt="Deep Black">
+</div>
+
+<div class="slider-wrapper">
+    <input type="range" id="brightness-slider" min="1" max="150" value="1">
+    <div id="hint-text" class="hint">진실은 어둠 속에 있습니다...</div>
+</div>
+
 <script>
-    let planet, thicket;
-    const planetRadius = 2500;
-    const branchCount = 400; // 가지 개수
-    let rotX = 0.4, rotY = 0;
+    const slider = document.getElementById('brightness-slider');
+    const img = document.getElementById('stego-image');
+    const container = document.getElementById('stego-container');
+    const hint = document.getElementById('hint-text');
 
-    function setup() {
-        createCanvas(windowWidth, windowHeight, WEBGL);
-        angleMode(DEGREES); // 뱀 코드와 동일하게 도(Degree) 단위 사용
+    slider.addEventListener('input', (e) => {
+        const val = e.target.value;
         
-        planet = buildGeometry(() => {
-            noStroke();
-            fill(255);
-            sphere(planetRadius, 64, 64);
-        });
-
-        buildThicket();
-    }
-
-    function buildThicket() {
-        if (thicket) freeGeometry(thicket);
+        // 1. 밝기 필터 적용 (수치를 대폭 높여 숨겨진 픽셀 노출)
+        img.style.filter = `brightness(${val})`;
         
-        thicket = buildGeometry(() => {
-            for (let i = 0; i < branchCount; i++) {
-                // 1. 구 표면 좌표 결정
-                let lon = random(360);
-                let lat = acos(random(-1, 1)) * (180 / PI);
-                
-                let x = planetRadius * sin(lat) * cos(lon);
-                let y = planetRadius * sin(lat) * sin(lon);
-                let z = planetRadius * cos(lat);
-
-                push();
-                translate(x, y, z);
-                
-                // 2. 구체 표면에 수직으로 세우는 회전 로직 (구직 정렬)
-                let v = createVector(x, y, z).normalize();
-                let phi_rot = acos(v.z);
-                let theta_rot = atan2(v.y, v.x);
-                
-                rotateZ(theta_rot);
-                rotateY(phi_rot);
-                rotateY(90); // 실린더가 바깥을 향하도록 최종 조정
-
-                // 3. 뱀 몸통 사양으로 그리기 (Cylinder 활용)
-                fill(10); // 검은색
-                let numSegments = floor(random(5, 12)); // 마디 수
-                let radius = random(15, 25); // 초기 굵기
-                
-                for (let segment = 0; segment < numSegments; segment++) {
-                    // 수직성을 유지하기 위해 아주 미세한 각도 변화만 허용
-                    rotateY(random(-5, 5)); 
-                    
-                    translate(40, 0, 0); // 마디 간격 이동
-                    
-                    push();
-                    rotateZ(90); // 실린더 방향 정렬
-                    // 뱀 코드처럼 끝으로 갈수록 가늘어지는 매핑 적용
-                    let currentRadius = map(segment, numSegments - 3, numSegments, radius, 2, true);
-                    cylinder(currentRadius, 80); 
-                    pop();
-                    
-                    translate(40, 0, 0);
-                }
-                pop();
-            }
-        });
-    }
-
-    function draw() {
-        background(240);
-
-        if (mouseIsPressed) {
-            rotY += (mouseX - pmouseX) * 0.2;
-            rotX -= (mouseY - pmouseY) * 0.2;
+        // 2. 일정 수치 이상 밝아지면 반응
+        if (val > 100) {
+            container.classList.add('revealed');
+            hint.textContent = "메시지를 클릭하여 입장하세요";
+            hint.style.color = "#00ff88";
+            
+            // 이미지 클릭 시 이동
+            img.onclick = () => {
+                window.location.href = "https://hidden-destination.com";
+            };
+        } else {
+            container.classList.remove('revealed');
+            hint.textContent = "더 밝게 조절해보세요...";
+            hint.style.color = "#444";
+            img.onclick = null;
         }
-
-        camera(0, -planetRadius - 1000, 2200, 0, -planetRadius, 0, 0, 1, 0);
-
-        // 광택용 조명 설정
-        ambientLight(80);
-        directionalLight(255, 255, 255, 1, 1, -1);
-        pointLight(255, 255, 255, 0, -planetRadius - 2000, 1000);
-
-        push();
-        rotateY(rotY);
-        rotateX(rotX);
-
-        // 흰색 바닥 구체
-        specularMaterial(255);
-        model(planet);
-
-        // 검은색 광택 실린더 가지
-        specularMaterial(15); 
-        shininess(200); // 뱀의 비늘 같은 강한 광택
-        model(thicket);
-        pop();
-    }
-
-    function windowResized() {
-        resizeCanvas(windowWidth, windowHeight);
-    }
+    });
 </script>
+
 </body>
 </html>
