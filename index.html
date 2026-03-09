@@ -2,93 +2,119 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Stegano Entrance</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hidden Message</title>
     <style>
-        :root { --accent: #00ff88; }
-        body { 
-            background: #050505; 
-            color: white; 
-            font-family: 'Courier New', monospace;
-            display: flex; flex-direction: column; 
-            justify-content: center; align-items: center; 
-            height: 100vh; margin: 0; 
+        :root {
+            --primary-color: #00fff0; /* 배경 및 초기 글자색 */
+            --glass-white: rgba(255, 255, 255, 0.2); /* 슬라이더 배경 */
         }
 
-        /* 이미지 영역 */
-        #stego-container {
-            position: relative;
-            margin-bottom: 50px;
-            transition: transform 0.5s;
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            background-color: var(--primary-color);
+            font-family: 'Pretendard', sans-serif;
+            overflow: hidden;
+            transition: background-color 0.3s ease;
         }
 
-        #stego-image {
-            width: 400px;
-            filter: brightness(1); /* 초기 상태: 거의 아무것도 안 보임 */
-            border-radius: 8px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        /* 글자 스타일 */
+        .hidden-text {
+            font-size: 8rem;
+            font-weight: 900;
+            color: var(--primary-color); /* 배경과 동일하게 설정 */
+            user-select: none; /* 드래그 방지 */
             cursor: default;
+            transition: color 0.3s ease, transform 0.3s ease;
+            letter-spacing: -5px;
         }
 
-        /* 슬라이더(막대) 스타일링 */
-        .slider-wrapper { width: 300px; text-align: center; }
-        
+        /* 하단 슬라이더 컨테이너 */
+        .controller {
+            position: absolute;
+            bottom: 50px;
+            width: 300px;
+            padding: 20px;
+            background: var(--glass-white);
+            backdrop-filter: blur(10px); /* 배경 흐림 효과 */
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 커스텀 슬라이더 스타일 */
         input[type=range] {
             width: 100%;
-            cursor: pointer;
-            accent-color: var(--accent); /* 슬라이더 포인트 색상 */
+            appearance: none;
+            background: rgba(255, 255, 255, 0.3);
+            height: 4px;
+            border-radius: 2px;
+            outline: none;
         }
 
-        .hint { font-size: 0.8rem; color: #444; margin-top: 10px; transition: color 0.3s; }
-        
-        /* 메시지가 발견되었을 때의 효과 */
-        .revealed #stego-image {
+        input[type=range]::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
             cursor: pointer;
-            outline: 2px solid var(--accent);
-            box-shadow: 0 0 30px var(--accent);
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        /* 텍스트가 나타났을 때 클릭 가능 상태 */
+        .revealed {
+            cursor: pointer !important;
         }
     </style>
 </head>
-<body>
+<body id="bg">
 
-<div id="stego-container">
-    <img id="stego-image" src="your_stego_image.png" alt="Deep Black">
-</div>
+    <h1 id="text" class="hidden-text">hello</h1>
 
-<div class="slider-wrapper">
-    <input type="range" id="brightness-slider" min="1" max="150" value="1">
-    <div id="hint-text" class="hint">진실은 어둠 속에 있습니다...</div>
-</div>
+    <div class="controller">
+        <input type="range" id="slider" min="0" max="100" value="0">
+    </div>
 
-<script>
-    const slider = document.getElementById('brightness-slider');
-    const img = document.getElementById('stego-image');
-    const container = document.getElementById('stego-container');
-    const hint = document.getElementById('hint-text');
+    <script>
+        const slider = document.getElementById('slider');
+        const text = document.getElementById('text');
+        const bg = document.getElementById('bg');
 
-    slider.addEventListener('input', (e) => {
-        const val = e.target.value;
-        
-        // 1. 밝기 필터 적용 (수치를 대폭 높여 숨겨진 픽셀 노출)
-        img.style.filter = `brightness(${val})`;
-        
-        // 2. 일정 수치 이상 밝아지면 반응
-        if (val > 100) {
-            container.classList.add('revealed');
-            hint.textContent = "메시지를 클릭하여 입장하세요";
-            hint.style.color = "#00ff88";
+        slider.addEventListener('input', (e) => {
+            const val = e.target.value;
             
-            // 이미지 클릭 시 이동
-            img.onclick = () => {
-                window.location.href = "https://hidden-destination.com";
-            };
-        } else {
-            container.classList.remove('revealed');
-            hint.textContent = "더 밝게 조절해보세요...";
-            hint.style.color = "#444";
-            img.onclick = null;
-        }
-    });
-</script>
+            // 1. 배경색을 점진적으로 흰색으로 변화시킴
+            // val이 100일 때 rgb(255, 255, 255)에 가깝게
+            const r = Math.round(0 + (val * 2.55));
+            const g = 255; 
+            const b = Math.round(240 + (val * 0.15));
+            
+            bg.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
 
+            // 2. 글자가 충분히 보일 때 효과 부여
+            if (val > 70) {
+                text.style.color = "rgba(0, 0, 0, 0.15)"; // 아주 연한 검은색으로 드러남
+                text.style.transform = "scale(1.1)";
+                text.classList.add('revealed');
+                
+                // 클릭 시 다음 페이지로 이동 (예시)
+                text.onclick = () => {
+                    alert("진짜 웹사이트로 이동합니다!");
+                    // location.href = 'next-page.html';
+                };
+            } else {
+                text.style.color = "var(--primary-color)";
+                text.style.transform = "scale(1)";
+                text.classList.remove('revealed');
+                text.onclick = null;
+            }
+        });
+    </script>
 </body>
 </html>
