@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dense Hairline Jungle</title>
+    <title>3D Perspective Hairline Jungle</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background-color: #f2f2f2; cursor: grab; }
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #e5e5e5; cursor: grab; }
         body:active { cursor: grabbing; }
     </style>
 </head>
@@ -14,70 +14,84 @@
 
 <script>
     let lines = [];
-    let offsetX = 0;
-    let offsetY = 0;
-    const worldSize = 5000; // 탐험 영역을 더 넓게 설정
-    const lineCount = 3500; // 선의 개수를 대폭 늘림
+    const lineCount = 5000; // 요청하신 대로 5000개 설정
+    const worldWidth = 6000;
+    const worldDepth = 8000; // 깊이감(소실점 방향)을 위해 더 길게 설정
+    
+    let camX = 0, camY = -200, camZ = 0; // 카메라 초기 위치
 
     function setup() {
-        createCanvas(windowWidth, windowHeight);
-        // 고해상도 출력을 위해 선 데이터를 미리 생성
-        for (let i = 0; i < lineCount; i++) {
-            lines.push(generateLongHair());
-        }
+        // WEBGL 모드로 전환하여 3D 원근감 활성화
+        createCanvas(windowWidth, windowHeight, WEBGL);
         
-        offsetX = -worldSize / 2 + width / 2;
-        offsetY = -worldSize / 2 + height / 2;
+        for (let i = 0; i < lineCount; i++) {
+            lines.push(generate3DHair());
+        }
     }
 
     function draw() {
-        background(242); 
+        background(230); // 배경색
 
+        // 마우스 드래그로 시점 이동 (원근감 탐험)
         if (mouseIsPressed) {
-            offsetX += mouseX - pmouseX;
-            offsetY += mouseY - pmouseY;
+            camX -= (mouseX - pmouseX) * 2;
+            camZ -= (mouseY - pmouseY) * 5; // 위아래 드래그 시 깊숙이 들어가는 효과
         }
 
-        push();
-        translate(offsetX, offsetY);
+        // 카메라 설정 (소실점 형성)
+        // perspective(시야각, 종횡비, 가까운 평면, 먼 평면)
+        perspective(PI / 3, width / height, 10, 10000);
+        camera(camX, camY, camZ + 1000, camX, camY, camZ, 0, 1, 0);
 
-        // 이미지 느낌을 살리기 위해 선의 스타일을 세밀하게 조정
+        // 5000개의 선 그리기
         noFill();
         for (let l of lines) {
-            stroke(l.color, l.opacity); 
+            // 거리에 따른 투명도 조절 (너무 먼 선은 안개처럼 사라짐)
+            let distance = abs(l.startZ - camZ);
+            let alpha = map(distance, 0, 5000, 150, 0);
+            if (alpha < 0) continue; // 화면 밖 선은 계산 제외(성능 최적화)
+
+            stroke(0, alpha);
             strokeWeight(l.weight);
             
             beginShape();
             for (let v of l.points) {
-                // 베지어 곡선 대신 curveVertex를 사용하여 길고 부드러운 선 구현
-                curveVertex(v.x, v.y);
+                vertex(v.x, v.y, v.z);
             }
             endShape();
         }
-        pop();
     }
 
-    function generateLongHair() {
+    function generate3DHair() {
         let points = [];
-        let x = random(-worldSize, worldSize);
-        let y = random(-worldSize, worldSize);
+        // X는 가로, Y는 높이(바닥 근처), Z는 깊이
+        let startX = random(-worldWidth, worldWidth);
+        let startY = random(200, 800); // 아래쪽에 깔리도록 설정
+        let startZ = random(-worldDepth, 1000);
         
-        // 선의 길이를 결정하는 세그먼트 수 (더 길게 설정)
-        let segments = random(40, 120); 
-        let noiseScale = 0.002; // 곡률을 더 완만하고 유기적으로
+        let x = startX;
+        let y = startY;
+        let z = startZ;
+        
+        let segments = random(30, 80);
+        let noiseScale = 0.001;
 
         for (let i = 0; i < segments; i++) {
-            let angle = noise(x * noiseScale, y * noiseScale, i * 0.01) * TWO_PI * 6;
-            x += cos(angle) * 12; // 한 스텝당 이동 거리
-            y += sin(angle) * 12;
-            points.push({x: x, y: y});
+            // 3차원 노이즈로 사방으로 뻗는 머리카락 구현
+            let angleH = noise(x * noiseScale, z * noiseScale) * TWO_PI * 2;
+            let angleV = noise(y * noiseScale, i * 0.01) * PI;
+            
+            x += cos(angleH) * 20;
+            y -= sin(angleV) * 15; // 위로 솟구치는 느낌 추가
+            z += sin(angleH) * 20;
+            
+            points.push({x: x, y: y, z: z});
         }
 
         return {
             points: points,
-            weight: random(0.3, 0.8), // 선마다 미세하게 다른 굵기
-            opacity: random(20, 70),  // 겹쳤을 때 깊이감을 주는 투명도
-            color: random() > 0.95 ? 100 : 0 // 가끔 흐린 선을 섞어 레이어감 형성
+            weight: random(0.2, 1.2), // 가까운 선은 더 굵게 보이도록 랜덤값 부여
+            startZ: startZ
         };
     }
 
