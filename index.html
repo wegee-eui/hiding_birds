@@ -1,124 +1,116 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Glossy Branches on Sphere</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
-    <style>
-        body { margin: 0; padding: 0; overflow: hidden; background-color: #f0f0f0; cursor: grab; }
-        body:active { cursor: grabbing; }
-    </style>
-</head>
-<body>
+let planet;
+let thicket;
+const planetRadius = 2500;
+const branchCount = 200; // 가지의 개수
 
-<script>
-    let rotX = 0.4; 
-    let rotY = 0;
-    const planetRadius = 3000; 
-    let branches = [];
-    const branchCount = 100; // 굵고 존재감 있는 가지의 개수
+let rotX = 0.4;
+let rotY = 0;
 
-    function setup() {
-        createCanvas(windowWidth, windowHeight, WEBGL);
+function setup() {
+  createCanvas(windowWidth, windowHeight, WEBGL);
+  angleMode(DEGREES);
+  
+  // 바닥이 될 흰색 구체 미리 생성 (성능 최적화)
+  planet = buildGeometry(() => {
+    noStroke();
+    fill(255);
+    sphere(planetRadius, 64, 64);
+  });
+
+  // 구 표면에 심어질 검은 가지들 생성
+  buildThicket();
+}
+
+function buildThicket() {
+  if (thicket) freeGeometry(thicket);
+
+  thicket = buildGeometry(() => {
+    for (let i = 0; i < branchCount; i++) {
+      // 1. 구 표면 위의 랜덤 지점 선정
+      let theta = random(360);
+      let phi = acos(random(-1, 1)) * (180 / PI);
+      
+      let x = planetRadius * sin(phi) * cos(theta);
+      let y = planetRadius * sin(phi) * sin(theta);
+      let z = planetRadius * cos(phi);
+
+      push();
+      translate(x, y, z);
+      
+      // 2. 구 표면에 수직(바깥 방향)으로 정렬
+      // 현재 좌표(x,y,z) 자체가 중심에서 뻗어나가는 방향 벡터가 됩니다.
+      let v = createVector(x, y, z).normalize();
+      let rho = v.mag();
+      let phi_rot = acos(v.z / (rho || 1));
+      let theta_rot = atan2(v.y, v.x);
+      
+      rotateZ(theta_rot);
+      rotateY(phi_rot);
+      rotateY(90); // 실린더가 바깥을 향하도록 조정
+
+      // 3. 검은색 광택 줄기 그리기
+      fill(10); // 거의 검정색
+      let segments = random(5, 15);
+      let thickness = random(15, 30);
+      
+      for (let j = 0; j < segments; j++) {
+        // 무작위로 구부러짐 추가
+        rotateY(random(-15, 15));
+        rotateZ(random(-15, 15));
         
-        // 가지 데이터 생성
-        for (let i = 0; i < branchCount; i++) {
-            branches.push(generateBranch());
-        }
-    }
-
-    function draw() {
-        background(240); 
-
-        if (mouseIsPressed) {
-            rotY += (mouseX - pmouseX) * 0.005;
-            rotX -= (mouseY - pmouseY) * 0.005;
-        }
-
-        // 카메라 설정
-        camera(0, -planetRadius - 800, 1800, 0, -planetRadius, 0, 0, 1, 0);
-
-        // [광택을 위한 조명 설계]
-        ambientLight(80); // 전체적으로 어둡게 깔아서 광택 대비 강화
+        translate(50, 0, 0); // 바깥쪽으로 이동하며 그리기
         
-        // 정면 광원 (흰색 하이라이트를 만듦)
-        pointLight(255, 255, 255, 0, -planetRadius - 1500, 1000);
-        
-        // 측면 광원 (입체감 강화)
-        directionalLight(200, 200, 200, 1, 1, -1);
-
         push();
-        rotateY(rotY);
-        rotateX(rotX);
-
-        // 1. 흰색 구체 (바닥)
-        push();
-        noStroke();
-        fill(255);
-        sphere(planetRadius, 48, 48); 
+        // 실제 입체적인 가지 모양 (실린더)
+        rotateZ(90);
+        cylinder(thickness, 60); 
         pop();
-
-        // 2. 검정색 광택 가지들
-        for (let b of branches) {
-            push();
-            // 재질 설정: 검정색 바탕에 강한 흰색 광택
-            specularMaterial(10); // 기본 색상 (거의 검정)
-            shininess(20);        // 광택의 날카로움
-            
-            // 3D 관 형태(Torus나 Cylinder 대용)를 만들기 위해 굵은 선 처리
-            noStroke();
-            fill(15); // 가지의 본체 색상
-
-            // 각 마디를 따라 두께가 있는 튜브 형태로 그리기
-            for (let i = 0; i < b.points.length - 1; i++) {
-                let p1 = b.points[i];
-                let p2 = b.points[i+1];
-                
-                push();
-                translate(p1.x, p1.y, p1.z);
-                // 점마다 작은 구체를 그려 굵은 가지 연결 느낌 구현
-                sphere(b.thickness); 
-                pop();
-            }
-            pop();
-        }
-        pop();
-    }
-
-    function generateBranch() {
-        let points = [];
-        let theta = random(TWO_PI);
-        let phi = acos(random(-1, 1));
         
-        // 구 표면 시작점
-        let x = planetRadius * sin(phi) * cos(theta);
-        let y = planetRadius * sin(phi) * sin(theta);
-        let z = planetRadius * cos(phi);
-        
-        let segments = random(10, 25);
-        let step = 40;
-
-        for (let i = 0; i < segments; i++) {
-            let n = noise(x * 0.005, y * 0.005, z * 0.005);
-            let angle1 = n * TWO_PI * 4;
-            
-            x += cos(angle1) * step;
-            y -= abs(sin(angle1)) * step * 0.5; // 구 표면 위로 솟아오르게 함
-            z += sin(angle1) * step;
-
-            points.push({x: x, y: y, z: z});
-        }
-
-        return {
-            points: points,
-            thickness: random(8, 15) // 요청하신 굵은 가지 두께
-        };
+        translate(50, 0, 0);
+        thickness *= 0.95; // 끝으로 갈수록 가늘어짐
+      }
+      pop();
     }
+  });
+}
 
-    function windowResized() {
-        resizeCanvas(windowWidth, windowHeight);
-    }
-</script>
-</body>
-</html>
+function draw() {
+  background(240);
+  
+  if (mouseIsPressed) {
+    rotY += (mouseX - pmouseX) * 0.2;
+    rotX -= (mouseY - pmouseY) * 0.2;
+  }
+
+  // 카메라: 구체 상단이 보이도록 배치
+  camera(0, -planetRadius - 1200, 2000, 0, -planetRadius, 0, 0, 1, 0);
+
+  // 광택을 위한 조명 설정
+  ambientLight(100);
+  directionalLight(255, 255, 255, 1, 1, -1);
+  pointLight(255, 255, 255, 0, -planetRadius - 2000, 1000);
+
+  push();
+  rotateY(rotY);
+  rotateX(rotX);
+
+  // 흰색 바닥 구체
+  noStroke();
+  specularMaterial(255);
+  model(planet);
+
+  // 검은색 광택 가지들
+  specularMaterial(20); // 검은색 재질
+  shininess(150);       // 강한 흰색 광택
+  model(thicket);
+  pop();
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}
+
+function mousePressed() {
+  // 클릭 시 정글 재생성 기능 (선택 사항)
+  // buildThicket(); 
+}
