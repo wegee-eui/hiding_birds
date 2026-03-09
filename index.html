@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dense 3D Thicket Explorer</title>
+    <title>3D Perspective Hairline Jungle</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background-color: #f0f0f0; cursor: grab; }
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #e5e5e5; cursor: grab; }
         body:active { cursor: grabbing; }
     </style>
 </head>
@@ -14,42 +14,43 @@
 
 <script>
     let lines = [];
-    const lineCount = 10000; // 요청하신 대로 압도적인 양 설정
-    const worldSize = 5000;
+    const lineCount = 5000; // 요청하신 대로 5000개 설정
+    const worldWidth = 6000;
+    const worldDepth = 8000; // 깊이감(소실점 방향)을 위해 더 길게 설정
     
-    let camX = 0, camY = -300, camZ = 1500;
+    let camX = 0, camY = -200, camZ = 0; // 카메라 초기 위치
 
     function setup() {
+        // WEBGL 모드로 전환하여 3D 원근감 활성화
         createCanvas(windowWidth, windowHeight, WEBGL);
-        // 덤불의 유기적인 꼬임을 위해 노이즈 디테일 설정
-        noiseDetail(4, 0.5);
-
+        
         for (let i = 0; i < lineCount; i++) {
-            lines.push(generateThicketLine());
+            lines.push(generate3DHair());
         }
     }
 
     function draw() {
-        background(245);
+        background(230); // 배경색
 
-        // 드래그 인터랙션: X축 이동 및 Z축(깊이) 탐험
+        // 마우스 드래그로 시점 이동 (원근감 탐험)
         if (mouseIsPressed) {
-            camX -= (mouseX - pmouseX) * 3;
-            camZ -= (mouseY - pmouseY) * 8; 
+            camX -= (mouseX - pmouseX) * 2;
+            camZ -= (mouseY - pmouseY) * 5; // 위아래 드래그 시 깊숙이 들어가는 효과
         }
 
-        // 원근감 및 카메라 설정
-        perspective(PI / 2.5, width / height, 10, 15000);
-        camera(camX, camY, camZ, camX, camY + 100, camZ - 1000, 0, 1, 0);
+        // 카메라 설정 (소실점 형성)
+        // perspective(시야각, 종횡비, 가까운 평면, 먼 평면)
+        perspective(PI / 3, width / height, 10, 10000);
+        camera(camX, camY, camZ + 1000, camX, camY, camZ, 0, 1, 0);
 
+        // 5000개의 선 그리기
         noFill();
-        
-        // 성능을 위해 현재 카메라 주변의 선들만 렌더링 (성능 최적화)
         for (let l of lines) {
-            let d = abs(l.z - camZ);
-            if (d > 4000) continue; // 너무 먼 선은 그리지 않음
+            // 거리에 따른 투명도 조절 (너무 먼 선은 안개처럼 사라짐)
+            let distance = abs(l.startZ - camZ);
+            let alpha = map(distance, 0, 5000, 150, 0);
+            if (alpha < 0) continue; // 화면 밖 선은 계산 제외(성능 최적화)
 
-            let alpha = map(d, 0, 4000, 180, 0);
             stroke(0, alpha);
             strokeWeight(l.weight);
             
@@ -61,34 +62,36 @@
         }
     }
 
-    function generateThicketLine() {
+    function generate3DHair() {
         let points = [];
-        // 시작점을 넓게 퍼뜨려 덤불의 기반 형성
-        let x = random(-worldSize, worldSize);
-        let z = random(-worldSize, worldSize);
-        let y = 600; // 바닥 높이
+        // X는 가로, Y는 높이(바닥 근처), Z는 깊이
+        let startX = random(-worldWidth, worldWidth);
+        let startY = random(200, 800); // 아래쪽에 깔리도록 설정
+        let startZ = random(-worldDepth, 1000);
         
-        const startZ = z;
-        const segments = random(15, 40); // 한 가닥의 길이
-        const step = 25; // 마디의 크기
+        let x = startX;
+        let y = startY;
+        let z = startZ;
+        
+        let segments = random(30, 80);
+        let noiseScale = 0.001;
 
         for (let i = 0; i < segments; i++) {
-            // 3D Perlin Noise로 덤불처럼 뒤엉키는 경로 계산
-            let n = noise(x * 0.005, y * 0.005, z * 0.005);
-            let angleH = n * TWO_PI * 4;
-            let angleV = n * PI * 2;
-
-            x += cos(angleH) * step;
-            y -= sin(angleV) * step; // 위로 솟구치거나 아래로 꺾임
-            z += sin(angleH) * step;
-
+            // 3차원 노이즈로 사방으로 뻗는 머리카락 구현
+            let angleH = noise(x * noiseScale, z * noiseScale) * TWO_PI * 2;
+            let angleV = noise(y * noiseScale, i * 0.01) * PI;
+            
+            x += cos(angleH) * 20;
+            y -= sin(angleV) * 15; // 위로 솟구치는 느낌 추가
+            z += sin(angleH) * 20;
+            
             points.push({x: x, y: y, z: z});
         }
 
         return {
             points: points,
-            weight: random(0.2, 0.7),
-            z: startZ
+            weight: random(0.2, 1.2), // 가까운 선은 더 굵게 보이도록 랜덤값 부여
+            startZ: startZ
         };
     }
 
