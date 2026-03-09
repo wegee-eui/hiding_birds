@@ -2,73 +2,75 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hidden Message</title>
+    <title>Hidden Message - Hello</title>
     <style>
+        /* 폰트 설정 (jgs-font 파일 경로를 확인하세요) */
+        @font-face {
+            font-family: 'jgs-font';
+            src: url('jgs-font.woff2') format('woff2'),
+                 url('jgs-font.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+        }
+
         :root {
-            --primary-color: #00fff0; /* 배경 및 초기 글자색 */
-            --glass-white: rgba(255, 255, 255, 0.2); /* 슬라이더 배경 */
+            --target-color: #00fff0; /* 고정된 글자 및 초기 배경색 */
         }
 
         body, html {
             margin: 0; padding: 0;
             width: 100%; height: 100%;
             display: flex; justify-content: center; align-items: center;
-            background-color: var(--primary-color);
-            font-family: 'Pretendard', sans-serif;
+            background-color: var(--target-color); /* 배경색 초기화 */
+            font-family: 'jgs-font', sans-serif;
             overflow: hidden;
-            transition: background-color 0.3s ease;
+            transition: background-color 0.1s linear;
         }
 
-        /* 글자 스타일 */
+        /* 글자 스타일: 색상과 크기를 완전히 고정 */
         .hidden-text {
             font-size: 8rem;
-            font-weight: 900;
-            color: var(--primary-color); /* 배경과 동일하게 설정 */
-            user-select: none; /* 드래그 방지 */
+            color: var(--target-color) !important; /* 무조건 00fff0 유지 */
+            user-select: none;
             cursor: default;
-            transition: color 0.3s ease, transform 0.3s ease;
-            letter-spacing: -5px;
+            letter-spacing: -2px;
+            margin: 0;
+            transition: none; /* 크기 변화 방지 */
         }
 
-        /* 하단 슬라이더 컨테이너 */
+        /* 하단 투명 슬라이더 컨테이너 */
         .controller {
             position: absolute;
-            bottom: 50px;
-            width: 300px;
-            padding: 20px;
-            background: var(--glass-white);
-            backdrop-filter: blur(10px); /* 배경 흐림 효과 */
-            border-radius: 50px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            bottom: 60px;
+            width: 280px;
+            padding: 15px 25px;
+            background: rgba(255, 255, 255, 0.15); /* 반투명 흰색 */
+            backdrop-filter: blur(8px);
+            border-radius: 100px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         }
 
-        /* 커스텀 슬라이더 스타일 */
         input[type=range] {
             width: 100%;
             appearance: none;
             background: rgba(255, 255, 255, 0.3);
-            height: 4px;
+            height: 3px;
             border-radius: 2px;
             outline: none;
         }
 
         input[type=range]::-webkit-slider-thumb {
             appearance: none;
-            width: 20px;
-            height: 20px;
-            background: white;
+            width: 18px;
+            height: 18px;
+            background: #ffffff;
             border-radius: 50%;
             cursor: pointer;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
 
-        /* 텍스트가 나타났을 때 클릭 가능 상태 */
-        .revealed {
+        /* 글자가 보일 때 클릭 가능 커서 */
+        .revealed-cursor {
             cursor: pointer !important;
         }
     </style>
@@ -89,29 +91,22 @@
         slider.addEventListener('input', (e) => {
             const val = e.target.value;
             
-            // 1. 배경색을 점진적으로 흰색으로 변화시킴
-            // val이 100일 때 rgb(255, 255, 255)에 가깝게
+            // 배경색만 점진적으로 흰색(#ffffff)으로 변경
+            // #00fff0(0, 255, 240) -> #ffffff(255, 255, 255)
             const r = Math.round(0 + (val * 2.55));
             const g = 255; 
             const b = Math.round(240 + (val * 0.15));
             
             bg.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
 
-            // 2. 글자가 충분히 보일 때 효과 부여
-            if (val > 70) {
-                text.style.color = "rgba(0, 0, 0, 0.15)"; // 아주 연한 검은색으로 드러남
-                text.style.transform = "scale(1.1)";
-                text.classList.add('revealed');
-                
-                // 클릭 시 다음 페이지로 이동 (예시)
+            // 슬라이더 수치가 높을 때만 클릭 이벤트 활성화 (글자색/크기는 고정)
+            if (val > 80) {
+                text.classList.add('revealed-cursor');
                 text.onclick = () => {
-                    alert("진짜 웹사이트로 이동합니다!");
-                    // location.href = 'next-page.html';
+                    window.location.href = "https://your-next-page.com";
                 };
             } else {
-                text.style.color = "var(--primary-color)";
-                text.style.transform = "scale(1)";
-                text.classList.remove('revealed');
+                text.classList.remove('revealed-cursor');
                 text.onclick = null;
             }
         });
