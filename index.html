@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Spherical Horizon</title>
+    <title>3D Soft Sphere Explorer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background-color: #ffffff; cursor: grab; }
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #f0f0f0; cursor: grab; }
         body:active { cursor: grabbing; }
     </style>
 </head>
@@ -18,43 +18,47 @@
     const planetRadius = 3000; 
 
     function setup() {
+        // 배경을 아주 살짝 회색(#f0f0f0)으로 설정하여 흰색 구체와 대비를 줍니다.
         createCanvas(windowWidth, windowHeight, WEBGL);
     }
 
     function draw() {
-        background(255); 
+        // 배경을 구체보다 아주 약간 어둡게 해서 경계를 만듭니다.
+        background(240); 
 
         if (mouseIsPressed) {
             rotY += (mouseX - pmouseX) * 0.005;
             rotX -= (mouseY - pmouseY) * 0.005;
         }
 
-        // 카메라 위치 조정 (구의 능선이 더 잘 보이도록)
-        camera(0, -planetRadius - 600, 1500, 0, -planetRadius, 0, 0, 1, 0);
+        // 카메라 설정
+        camera(0, -planetRadius - 800, 1800, 0, -planetRadius, 0, 0, 1, 0);
 
-        // [입체감의 핵심: 조명 설정]
-        // 1. 전체적인 어두운 부분의 밝기 (너무 낮추면 검게 보이고, 너무 높으면 평면이 됩니다)
-        ambientLight(150); 
+        // [입체감을 위한 그림자 및 조명 설계]
         
-        // 2. 강한 직사광선 (위쪽에서 비스듬히 내려오는 빛을 주어 하이라이트와 그림자 생성)
-        // 마치 태양광처럼 작동하여 구의 곡면을 따라 명암 변화를 만듭니다.
-        directionalLight(255, 255, 255, 0.5, 1, -0.5); 
+        // 1. 환경광: 구체의 어두운 부분을 연한 회색으로 채움
+        ambientLight(180); 
         
-        // 3. 점광원 (카메라 근처에서 비추는 보조광)
-        pointLight(200, 200, 200, 0, -planetRadius - 1000, 500);
+        // 2. 핵심 광원: 위에서 아래로 비추는 강한 빛 (입체감 형성)
+        directionalLight(255, 255, 255, 0, 1, -1); 
+        
+        // 3. 역광(Rim Light): 구체 뒤쪽에서 빛을 쏘아 외곽선을 배경과 분리
+        pointLight(255, 255, 255, 0, -planetRadius - 2000, -1000);
 
         push();
         rotateY(rotY);
         rotateX(rotX);
 
-        // 구체의 재질 설정
-        // 스펙큘러 마테리얼은 빛을 반사하여 입체감을 더 살려줍니다.
-        specularMaterial(255);
-        shininess(10); // 반사광의 세기
+        // [구체 스타일링]
+        // 선(Stroke)을 아주 연한 회색으로 넣어 형태를 확실히 잡습니다.
+        stroke(200, 100); 
+        strokeWeight(0.5);
         
-        noStroke();
-        // 구의 해상도를 높여서 부드러운 곡면 표현
-        sphere(planetRadius, 100, 100); 
+        // 구체 내부 색상
+        fill(255);
+        
+        // 구체의 해상도를 높여서 아주 매끄럽게 표현
+        sphere(planetRadius, 48, 48); 
         pop();
     }
 
