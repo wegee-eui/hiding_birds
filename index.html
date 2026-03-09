@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Perspective Hairline Jungle</title>
+    <title>Spherical Thicket Explorer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background-color: #e5e5e5; cursor: grab; }
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #f8f8f8; cursor: grab; }
         body:active { cursor: grabbing; }
     </style>
 </head>
@@ -14,44 +14,51 @@
 
 <script>
     let lines = [];
-    const lineCount = 5000; // 요청하신 대로 5000개 설정
-    const worldWidth = 6000;
-    const worldDepth = 8000; // 깊이감(소실점 방향)을 위해 더 길게 설정
+    const lineCount = 10000;
+    const planetRadius = 3000; // 흰색 구체의 반지름
     
-    let camX = 0, camY = -200, camZ = 0; // 카메라 초기 위치
+    let rotX = 0, rotY = 0; // 구체를 회전시켜 탐험하는 방식
 
     function setup() {
-        // WEBGL 모드로 전환하여 3D 원근감 활성화
         createCanvas(windowWidth, windowHeight, WEBGL);
-        
+        noiseDetail(8, 0.65);
+
         for (let i = 0; i < lineCount; i++) {
-            lines.push(generate3DHair());
+            lines.push(generateSphericalHair());
         }
     }
 
     function draw() {
-        background(230); // 배경색
+        background(248); 
 
-        // 마우스 드래그로 시점 이동 (원근감 탐험)
+        // 사용자가 구 위를 굴리며 탐험하는 듯한 인터랙션
         if (mouseIsPressed) {
-            camX -= (mouseX - pmouseX) * 2;
-            camZ -= (mouseY - pmouseY) * 5; // 위아래 드래그 시 깊숙이 들어가는 효과
+            rotY += (mouseX - pmouseX) * 0.005;
+            rotX -= (mouseY - pmouseY) * 0.005;
         }
 
-        // 카메라 설정 (소실점 형성)
-        // perspective(시야각, 종횡비, 가까운 평면, 먼 평면)
-        perspective(PI / 3, width / height, 10, 10000);
-        camera(camX, camY, camZ + 1000, camX, camY, camZ, 0, 1, 0);
+        // 카메라 및 조명 설정
+        perspective(PI / 3, width / height, 10, 20000);
+        camera(0, 0, 1500, 0, 0, 0, 0, 1, 0);
+        ambientLight(200);
+        pointLight(255, 255, 255, 0, -500, 500);
 
-        // 5000개의 선 그리기
+        push();
+        rotateX(rotX);
+        rotateY(rotY);
+
+        // 1. 흰색 바닥 구체 생성
+        push();
+        noStroke();
+        fill(255); // 요청하신 흰색 바닥
+        sphere(planetRadius); 
+        pop();
+
+        // 2. 덤불 렌더링
         noFill();
         for (let l of lines) {
-            // 거리에 따른 투명도 조절 (너무 먼 선은 안개처럼 사라짐)
-            let distance = abs(l.startZ - camZ);
-            let alpha = map(distance, 0, 5000, 150, 0);
-            if (alpha < 0) continue; // 화면 밖 선은 계산 제외(성능 최적화)
-
-            stroke(0, alpha);
+            // 카메라와 가까운 부분만 진하게 그려 성능과 몰입감 최적화
+            stroke(0, l.opacity);
             strokeWeight(l.weight);
             
             beginShape();
@@ -60,38 +67,41 @@
             }
             endShape();
         }
+        pop();
     }
 
-    function generate3DHair() {
+    function generateSphericalHair() {
         let points = [];
-        // X는 가로, Y는 높이(바닥 근처), Z는 깊이
-        let startX = random(-worldWidth, worldWidth);
-        let startY = random(200, 800); // 아래쪽에 깔리도록 설정
-        let startZ = random(-worldDepth, 1000);
         
-        let x = startX;
-        let y = startY;
-        let z = startZ;
+        // 구 표면 위의 랜덤한 시작 지점 계산 (구면 좌표계)
+        let theta = random(TWO_PI);
+        let phi = acos(random(-1, 1));
         
-        let segments = random(30, 80);
-        let noiseScale = 0.001;
+        let x = planetRadius * sin(phi) * cos(theta);
+        let y = planetRadius * sin(phi) * sin(theta);
+        let z = planetRadius * cos(phi);
+        
+        const segments = random(20, 50);
+        const step = 15;
 
         for (let i = 0; i < segments; i++) {
-            // 3차원 노이즈로 사방으로 뻗는 머리카락 구현
-            let angleH = noise(x * noiseScale, z * noiseScale) * TWO_PI * 2;
-            let angleV = noise(y * noiseScale, i * 0.01) * PI;
-            
-            x += cos(angleH) * 20;
-            y -= sin(angleV) * 15; // 위로 솟구치는 느낌 추가
-            z += sin(angleH) * 20;
-            
+            // 방향성을 완전히 랜덤하게 만들기 위해 3D 노이즈 적용
+            let n = noise(x * 0.01, y * 0.01, z * 0.01);
+            let angle1 = n * TWO_PI * 5;
+            let angle2 = n * PI * 3;
+
+            // 선이 구 표면 밖으로 무질서하게 뻗어나감
+            x += cos(angle1) * step;
+            y += sin(angle1) * step;
+            z += cos(angle2) * step;
+
             points.push({x: x, y: y, z: z});
         }
 
         return {
             points: points,
-            weight: random(0.2, 1.2), // 가까운 선은 더 굵게 보이도록 랜덤값 부여
-            startZ: startZ
+            weight: random(0.3, 0.8),
+            opacity: random(30, 90)
         };
     }
 
