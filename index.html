@@ -3,58 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hairline Jungle Explorer</title>
+    <title>Dense Hairline Jungle</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background-color: #f0f0f0; cursor: grab; }
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #f2f2f2; cursor: grab; }
         body:active { cursor: grabbing; }
-        canvas { display: block; }
     </style>
 </head>
 <body>
 
 <script>
-    let lines = []; // 선들의 데이터를 저장할 배열
-    let offsetX = 0; // 카메라 X 위치
-    let offsetY = 0; // 카메라 Y 위치
-    let worldSize = 4000; // 탐험할 수 있는 전체 맵의 크기
+    let lines = [];
+    let offsetX = 0;
+    let offsetY = 0;
+    const worldSize = 5000; // 탐험 영역을 더 넓게 설정
+    const lineCount = 3500; // 선의 개수를 대폭 늘림
 
     function setup() {
         createCanvas(windowWidth, windowHeight);
-        
-        // 1. 선 숲 미리 생성 (한 번만 실행)
-        // 화면보다 훨씬 큰 영역에 랜덤하게 선들을 배치합니다.
-        for (let i = 0; i < 1500; i++) {
-            lines.push(generateHairyLine());
+        // 고해상도 출력을 위해 선 데이터를 미리 생성
+        for (let i = 0; i < lineCount; i++) {
+            lines.push(generateLongHair());
         }
         
-        // 시작 위치를 맵의 중앙으로 설정
         offsetX = -worldSize / 2 + width / 2;
         offsetY = -worldSize / 2 + height / 2;
     }
 
     function draw() {
-        background(240); // 배경색
+        background(242); 
 
-        // 2. 드래그 인터랙션 로직
         if (mouseIsPressed) {
             offsetX += mouseX - pmouseX;
             offsetY += mouseY - pmouseY;
         }
 
         push();
-        translate(offsetX, offsetY); // 마우스 드래그만큼 화면 이동
+        translate(offsetX, offsetY);
 
-        // 3. 미리 저장된 선들 그리기
-        stroke(0, 0, 0, 60);
-        strokeWeight(0.7);
+        // 이미지 느낌을 살리기 위해 선의 스타일을 세밀하게 조정
         noFill();
-
         for (let l of lines) {
-            // 성능을 위해 현재 화면에 보이는 선들만 그릴 수도 있지만, 
-            // 이 정도 개수는 p5.js에서 충분히 돌아갑니다.
+            stroke(l.color, l.opacity); 
+            strokeWeight(l.weight);
+            
             beginShape();
-            for (let v of l) {
+            for (let v of l.points) {
+                // 베지어 곡선 대신 curveVertex를 사용하여 길고 부드러운 선 구현
                 curveVertex(v.x, v.y);
             }
             endShape();
@@ -62,21 +57,28 @@
         pop();
     }
 
-    // 머리카락 한 가닥의 좌표 데이터를 생성하는 함수
-    function generateHairyLine() {
+    function generateLongHair() {
         let points = [];
         let x = random(-worldSize, worldSize);
         let y = random(-worldSize, worldSize);
-        let segments = random(20, 60); // 선의 길이 결정
-        let noiseScale = 0.003;
+        
+        // 선의 길이를 결정하는 세그먼트 수 (더 길게 설정)
+        let segments = random(40, 120); 
+        let noiseScale = 0.002; // 곡률을 더 완만하고 유기적으로
 
         for (let i = 0; i < segments; i++) {
-            let angle = noise(x * noiseScale, y * noiseScale) * TWO_PI * 4;
-            x += cos(angle) * 10;
-            y += sin(angle) * 10;
+            let angle = noise(x * noiseScale, y * noiseScale, i * 0.01) * TWO_PI * 6;
+            x += cos(angle) * 12; // 한 스텝당 이동 거리
+            y += sin(angle) * 12;
             points.push({x: x, y: y});
         }
-        return points;
+
+        return {
+            points: points,
+            weight: random(0.3, 0.8), // 선마다 미세하게 다른 굵기
+            opacity: random(20, 70),  // 겹쳤을 때 깊이감을 주는 투명도
+            color: random() > 0.95 ? 100 : 0 // 가끔 흐린 선을 섞어 레이어감 형성
+        };
     }
 
     function windowResized() {
